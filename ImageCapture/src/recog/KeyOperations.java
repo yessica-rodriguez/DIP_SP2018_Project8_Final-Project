@@ -392,12 +392,7 @@ public class KeyOperations extends BorderPane {
             // OpenCV Stuff... Mat in and Mat out
             binarylImageMat =  OpenCVProcessor.doThreshold(graylImageMat,((int) thresholdSlider.getValue()));
             Image resultImg = FXDIPUtils.mat2Image(binarylImageMat); 
-            binarylImageView.setImage(resultImg);  
-            // For fun show the reconstructed based on a subset of the total features
-            currentReconstructedMat       = OpenCVProcessor.doFDDescriptorsComplexDistanceReconstruction(currentImageMat,1); 
-            Image currentReconstructedimage = FXDIPUtils.mat2Image(currentReconstructedMat); 
-            currentReconstructedimageview.setImage(currentReconstructedimage);
-            
+            binarylImageView.setImage(resultImg);            
         }        
     }
     
