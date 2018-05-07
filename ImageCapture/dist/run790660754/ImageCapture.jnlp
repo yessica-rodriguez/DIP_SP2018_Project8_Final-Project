@@ -8,7 +8,7 @@
   </information>
   <resources>
     <j2se version="1.6+" java-vm-args=""-Djava.library.path="C:\opencv\build\java\x64"" "  href="http://java.sun.com/products/autodl/j2se"/>
-    <jar href="ImageCapture.jar" size="348211" download="eager" />
+    <jar href="ImageCapture.jar" size="349278" download="eager" />
     <jar href="lib\mysql-connector-java-5.1.46.jar" size="1004838" download="eager" />
     <jar href="lib\opencv-341.jar" size="423917" download="eager" />
   </resources>

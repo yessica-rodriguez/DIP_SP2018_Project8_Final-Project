@@ -6,7 +6,21 @@
 package recog;
 
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.sql.Blob;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.embed.swing.SwingFXUtils;
@@ -63,6 +77,9 @@ public class KeyOperations extends BorderPane {
     //Data Structure used for captured images
     
     private Slider thresholdSlider = new Slider();
+    
+    Database database;
+    Statement myStmt;
 
     //Captured Images pane
     private final TilePane tilePaneCapturedImages = new TilePane();
@@ -102,6 +119,11 @@ public class KeyOperations extends BorderPane {
     byte[][] currentImageBytes;
     public KeyOperations(TabPane tabsPane) 
     {
+        //connection to the database
+        
+        database = new Database();
+        myStmt = database.getMyStmt();
+        
         this.tabsPane = tabsPane;  
         
         // everytime the tab is selected, check the databases for changes        
@@ -145,6 +167,8 @@ public class KeyOperations extends BorderPane {
         createUIleftPanel();
         createUIcenterPanel();
         createUIbottomPanel();
+        
+        //generate Database Connection
     }
 
     private void createUItopPanel() {
@@ -279,7 +303,6 @@ public class KeyOperations extends BorderPane {
         return dipOperations;
     }
     
-
        
     /**
      * @return the liveImage
@@ -309,6 +332,7 @@ public class KeyOperations extends BorderPane {
     public void setQueryImageView(ImageView queryImageView) {
         this.originalImageview = queryImageView;
     }
+    
 
     class Operation1Handler implements EventHandler<ActionEvent> {
 
@@ -331,7 +355,7 @@ public class KeyOperations extends BorderPane {
               
                         currentImageBytes =  ImageIoFX.getGrayByteImageArray2DFromBufferedImage(bufferedImage2);
                         graylImageMat     =  FXDIPUtils.byteToGrayMat(currentImageBytes, CV_8UC1); 
-                        Image graylImage  =  FXDIPUtils.mat2Image(graylImageMat); 
+                        Image graylImage  =  FXDIPUtils.mat2Image(graylImageMat);
                         graylImageView.setImage(graylImage);
                     }
                     catch (Exception e)
@@ -342,9 +366,10 @@ public class KeyOperations extends BorderPane {
     class Operation4Handler implements EventHandler<ActionEvent> {
         @Override
         public void handle(ActionEvent event) {
-            graylImageMat =   OpenCVProcessor.doGrayImage(graylImageMat);  
+            graylImageMat = OpenCVProcessor.doGrayImage(graylImageMat);  
             Image resultImg = FXDIPUtils.mat2Image(graylImageMat); 
             graylImageView.setImage(resultImg);
+            
         }        
     }
     
@@ -354,6 +379,7 @@ public class KeyOperations extends BorderPane {
             graylImageMat =   OpenCVProcessor.doNegative(graylImageMat);  
             Image resultImg = FXDIPUtils.mat2Image(graylImageMat); 
             graylImageView.setImage(resultImg);
+            
         }        
     }
     
@@ -371,11 +397,12 @@ public class KeyOperations extends BorderPane {
             Image resultImg2 = FXDIPUtils.mat2Image(currentContourMat); 
             contourImageView.setImage(resultImg2);
             // Extract Features
-            double[] features       = OpenCVProcessor.doFDDescriptorsComplexDistance(binarylImageMat,1); 
+            double[] features = OpenCVProcessor.doFDDescriptorsComplexDistance(binarylImageMat,5);
+            
             //Graph the FDs... they are tiny in mgd?! first is always one (you can remove it if you want to).
-            fdGraph = fdGraph.graphFD(features, 20);   
+            fdGraph = fdGraph.graphFD(features, 50);   
             // For fun show the reconstructed based on a subset of the total features
-            currentReconstructedMat       = OpenCVProcessor.doFDDescriptorsComplexDistanceReconstruction(currentImageMat,1); 
+            //currentReconstructedMat       = OpenCVProcessor.doFDDescriptorsComplexDistanceReconstruction(currentImageMat,1); 
             Image currentReconstructedimage = FXDIPUtils.mat2Image(currentReconstructedMat); 
             currentReconstructedimageview.setImage(currentReconstructedimage);  
         }        
@@ -390,10 +417,9 @@ public class KeyOperations extends BorderPane {
             Image resultImg = FXDIPUtils.mat2Image(binarylImageMat); 
             binarylImageView.setImage(resultImg);  
             // For fun show the reconstructed based on a subset of the total features
-            currentReconstructedMat       = OpenCVProcessor.doFDDescriptorsComplexDistanceReconstruction(currentImageMat,1); 
+            //currentReconstructedMat       = OpenCVProcessor.doFDDescriptorsComplexDistanceReconstruction(currentImageMat,1); 
             Image currentReconstructedimage = FXDIPUtils.mat2Image(currentReconstructedMat); 
             currentReconstructedimageview.setImage(currentReconstructedimage);
-            
         }        
     }
     
