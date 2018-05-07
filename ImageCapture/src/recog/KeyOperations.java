@@ -6,21 +6,7 @@
 package recog;
 
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.sql.Blob;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.embed.swing.SwingFXUtils;
@@ -71,15 +57,16 @@ import utilities.ImageIoFX;
 //BackgroundSize.DEFAULT);
 //label1.setBackground(new Background(myBI));
 public class KeyOperations extends BorderPane {
+    
+    private BufferedImage bufferedImage;
 
     //Frame Grabber from OpenCV
     private TabPane tabsPane;
     //Data Structure used for captured images
     
     private Slider thresholdSlider = new Slider();
-    
-    Database database;
-    Statement myStmt;
+    private Slider reconSlider = new Slider();
+    private Slider featuresSlider = new Slider();
 
     //Captured Images pane
     private final TilePane tilePaneCapturedImages = new TilePane();
@@ -119,11 +106,6 @@ public class KeyOperations extends BorderPane {
     byte[][] currentImageBytes;
     public KeyOperations(TabPane tabsPane) 
     {
-        //connection to the database
-        
-        database = new Database();
-        myStmt = database.getMyStmt();
-        
         this.tabsPane = tabsPane;  
         
         // everytime the tab is selected, check the databases for changes        
@@ -167,8 +149,6 @@ public class KeyOperations extends BorderPane {
         createUIleftPanel();
         createUIcenterPanel();
         createUIbottomPanel();
-        
-        //generate Database Connection
     }
 
     private void createUItopPanel() {
@@ -285,24 +265,53 @@ public class KeyOperations extends BorderPane {
         thresholdSlider.setMinorTickCount(10);
         thresholdSlider.setBlockIncrement(10);
         
-        //Segment the image and extract the outline
-        Button SegOutButton = new Button("Segment and extract outline");
-        SegOutButton.setMaxWidth(Double.MAX_VALUE);
-        //SegOutButton.setOnAction(new Operation6Handler());
+        reconSlider.setMin(0);
+        reconSlider.setMax(512);
+        reconSlider.setValue(512);
+        reconSlider.setShowTickLabels(true);
+        reconSlider.setShowTickMarks(true);
+        reconSlider.setMajorTickUnit(100);
+        reconSlider.setMinorTickCount(10);
+        reconSlider.setBlockIncrement(10);
+        
+        featuresSlider.setMin(0);
+        featuresSlider.setMax(512);
+        featuresSlider.setValue(512);
+        featuresSlider.setShowTickLabels(true);
+        featuresSlider.setShowTickMarks(true);
+        featuresSlider.setMajorTickUnit(100);
+        featuresSlider.setMinorTickCount(10);
+        featuresSlider.setBlockIncrement(10);
+        
+        // Contour
+        Button ContourButton = new Button("Edge Detection-OpenCV");
+        ContourButton.setMaxWidth(Double.MAX_VALUE);
+        ContourButton.setOnAction(new Operation6Handler());
+        
+        // Contour
+        Button ReconButton = new Button("Reconstruction");
+        ReconButton.setMaxWidth(Double.MAX_VALUE);
+        ReconButton.setOnAction(new Operation7Handler());
         
         // Process 
-        Button processKeyButton = new Button("Edge Detection-OpenCV");
+        Button processKeyButton = new Button("Extract Features");
         processKeyButton.setMaxWidth(Double.MAX_VALUE);
         processKeyButton.setOnAction(new Operation3Handler());
+        
+        // Process 
+        Button ClassifyKeyButton = new Button("Classify");
+        ClassifyKeyButton.setMaxWidth(Double.MAX_VALUE);
+        //ClassifyKeyButton.setOnAction(new Operation8Handler());
 
         // Final layout
         VBox vb = new VBox(10);
-        vb.getChildren().addAll(selectKeyButton, GrayButton, NegateButton, BinarizeButton, thresholdSlider, SegOutButton, processKeyButton);
+        vb.getChildren().addAll(selectKeyButton, GrayButton, NegateButton, thresholdSlider, BinarizeButton, ContourButton, reconSlider, ReconButton, featuresSlider, processKeyButton, ClassifyKeyButton);
 
         dipOperations.getChildren().addAll(vb);
         return dipOperations;
     }
     
+
        
     /**
      * @return the liveImage
@@ -332,10 +341,8 @@ public class KeyOperations extends BorderPane {
     public void setQueryImageView(ImageView queryImageView) {
         this.originalImageview = queryImageView;
     }
-    
 
     class Operation1Handler implements EventHandler<ActionEvent> {
-
         final FileChooser fileChooser = new FileChooser();
         @Override
         public void handle(ActionEvent event) {
@@ -347,99 +354,86 @@ public class KeyOperations extends BorderPane {
                     fileChooser.getExtensionFilters().addAll(extFilterJPG);
                     try
                     {
-                        BufferedImage bufferedImage  = ImageIO.read(file);
-                        BufferedImage bufferedImage2 = ImageIoFX.toGray(bufferedImage);
-                        
+                        bufferedImage  = ImageIO.read(file);
                         Image image  = SwingFXUtils.toFXImage(bufferedImage, null);
                         originalImageview.setImage(image);
-              
-                        currentImageBytes =  ImageIoFX.getGrayByteImageArray2DFromBufferedImage(bufferedImage2);
-                        graylImageMat     =  FXDIPUtils.byteToGrayMat(currentImageBytes, CV_8UC1); 
-                        Image graylImage  =  FXDIPUtils.mat2Image(graylImageMat);
-                        graylImageView.setImage(graylImage);
                     }
                     catch (Exception e)
                     { }             
         }
     }
     
+    //Grey-Level
     class Operation4Handler implements EventHandler<ActionEvent> {
         @Override
         public void handle(ActionEvent event) {
-            graylImageMat = OpenCVProcessor.doGrayImage(graylImageMat);  
-            Image resultImg = FXDIPUtils.mat2Image(graylImageMat); 
-            graylImageView.setImage(resultImg);
-            
+            BufferedImage bufferedImage2 = ImageIoFX.toGray(bufferedImage);
+            currentImageBytes =  ImageIoFX.getGrayByteImageArray2DFromBufferedImage(bufferedImage2);
+            graylImageMat     =  FXDIPUtils.byteToGrayMat(currentImageBytes, CV_8UC1); 
+            Image graylImage  =  FXDIPUtils.mat2Image(graylImageMat); 
+            graylImageView.setImage(graylImage);
         }        
     }
     
+    //Negative Image
     class Operation2Handler implements EventHandler<ActionEvent> {
         @Override
         public void handle(ActionEvent event) {
             graylImageMat =   OpenCVProcessor.doNegative(graylImageMat);  
             Image resultImg = FXDIPUtils.mat2Image(graylImageMat); 
             graylImageView.setImage(resultImg);
+        }        
+    }
+    
+    //Binarization
+    class Operation5Handler implements EventHandler<ActionEvent> {
+        @Override
+        public void handle(ActionEvent event) {
+            // OpenCV Stuff... Mat in and Mat out
+            binarylImageMat =  OpenCVProcessor.doThreshold(graylImageMat,((int) thresholdSlider.getValue()));
+            Image resultImg = FXDIPUtils.mat2Image(binarylImageMat); 
+            binarylImageView.setImage(resultImg);  
+            // For fun show the reconstructed based on a subset of the total features
+            currentReconstructedMat       = OpenCVProcessor.doFDDescriptorsComplexDistanceReconstruction(currentImageMat,1); 
+            Image currentReconstructedimage = FXDIPUtils.mat2Image(currentReconstructedMat); 
+            currentReconstructedimageview.setImage(currentReconstructedimage);
             
         }        
     }
     
-    class Operation3Handler implements EventHandler<ActionEvent> {
+    //Contour
+    class Operation6Handler implements EventHandler<ActionEvent> {
         @Override
         public void handle(ActionEvent event) {
             // OpenCV Stuff... Mat in and Mat out
-            boolean  drawBoundingRect=true;
-            binarylImageMat =  OpenCVProcessor.doThreshold(graylImageMat,100);
-            Image resultImg = FXDIPUtils.mat2Image(binarylImageMat); 
-            binarylImageView.setImage(resultImg);
             MatOfPoint matOfPoint   = OpenCVProcessor.doContour(binarylImageMat);
             currentContourMat       = OpenCVProcessor.drawContourMat(matOfPoint, binarylImageMat);
             // Show contour
             Image resultImg2 = FXDIPUtils.mat2Image(currentContourMat); 
             contourImageView.setImage(resultImg2);
-            // Extract Features
-            double[] features = OpenCVProcessor.doFDDescriptorsComplexDistance(binarylImageMat,5);
-            
-            //Graph the FDs... they are tiny in mgd?! first is always one (you can remove it if you want to).
-            fdGraph = fdGraph.graphFD(features, 50);   
+        }        
+    }
+    
+    //Reconstruction
+    class Operation7Handler implements EventHandler<ActionEvent> {
+        @Override
+        public void handle(ActionEvent event) {  
             // For fun show the reconstructed based on a subset of the total features
-            //currentReconstructedMat       = OpenCVProcessor.doFDDescriptorsComplexDistanceReconstruction(currentImageMat,1); 
+            currentReconstructedMat       = OpenCVProcessor.doFDDescriptorsComplexDistanceReconstruction(binarylImageMat,((int) reconSlider.getValue())); 
             Image currentReconstructedimage = FXDIPUtils.mat2Image(currentReconstructedMat); 
             currentReconstructedimageview.setImage(currentReconstructedimage);  
         }        
     }
     
-    class Operation5Handler implements EventHandler<ActionEvent> {
+    //Extract Features
+    class Operation3Handler implements EventHandler<ActionEvent> {
         @Override
         public void handle(ActionEvent event) {
-            // OpenCV Stuff... Mat in and Mat out
-            boolean  drawBoundingRect=true;
-            binarylImageMat =  OpenCVProcessor.doThreshold(graylImageMat,((int) thresholdSlider.getValue()));
-            Image resultImg = FXDIPUtils.mat2Image(binarylImageMat); 
-            binarylImageView.setImage(resultImg);  
-            // For fun show the reconstructed based on a subset of the total features
-            //currentReconstructedMat       = OpenCVProcessor.doFDDescriptorsComplexDistanceReconstruction(currentImageMat,1); 
-            Image currentReconstructedimage = FXDIPUtils.mat2Image(currentReconstructedMat); 
-            currentReconstructedimageview.setImage(currentReconstructedimage);
+            double[] features       = OpenCVProcessor.doFDDescriptorsComplexDistance(binarylImageMat,((int) featuresSlider.getValue())); 
+            //Graph the FDs... they are tiny in mgd?! first is always one (you can remove it if you want to).
+            fdGraph = fdGraph.graphFD(features, ((int) featuresSlider.getValue()));  
         }        
     }
-    
-//    class Operation2Handler implements EventHandler<ActionEvent> {
-//        @Override
-//        public void handle(ActionEvent event) {
-//            // OpenCV Stuff... Mat in and Mat out
-//            Mat negativeMat  = OpenCVProcessor.doNegative(currentImageMat);
-//            // Mat result = OpenCVProcessor.doCanny(currentImageMat);
-//            int blockSize=7;
-//            double C= 10;
-//            
-//            Mat thresholdedMat = OpenCVProcessor.doThreshold(negativeMat,100);
-//            Mat result         = OpenCVProcessor.doMorphGrad(thresholdedMat, 1, OpenCVProcessor.MORPH_GRAD_DOUBLE);
-//            
-//            //Convert Mat result to Image so it can be displayes in JavaFX
-//            Image resultImg = FXDIPUtils.mat2Image(result); 
-//            processedimageview.setImage(resultImg);
-//        }        
-//    }
 
 }
 
