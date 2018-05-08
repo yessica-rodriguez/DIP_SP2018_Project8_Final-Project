@@ -7,6 +7,7 @@ package recog;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.util.ArrayList;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.embed.swing.SwingFXUtils;
@@ -35,6 +36,7 @@ import javafx.scene.text.FontPosture;
 import javafx.scene.text.TextAlignment;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.stage.FileChooser;
 import javax.imageio.ImageIO;
@@ -101,7 +103,14 @@ public class KeyOperations extends BorderPane {
 
     // Capture/Cropping
     private final Image     processedimage=null;
-    private final ImageView processedimageview= new ImageView();;
+    private final ImageView processedimageview= new ImageView();
+    
+    private double[] features;
+    private int ID;
+    
+    private Image     DBImage;
+    private ImageView DBImageView = new ImageView();
+    Label classification;
     
     byte[][] currentImageBytes;
     public KeyOperations(TabPane tabsPane) 
@@ -165,12 +174,23 @@ public class KeyOperations extends BorderPane {
     }
 
     private void createUIbottomPanel() {
-        this.setBottom(null);
+        this.setBottom(generateBottomPanel());
     }
 
     private VBox generateCenterPanel() {
-
- 
+        originalImageview.setFitHeight(200);
+        originalImageview.setFitWidth(400);
+        graylImageView.setFitHeight(200);
+        binarylImageView.setFitHeight(200);
+        contourImageView.setFitHeight(200);
+        currentReconstructedimageview.setFitHeight(200);
+        graylImageView.setFitWidth(400);
+        binarylImageView.setFitWidth(400);
+        contourImageView.setFitWidth(400);
+        currentReconstructedimageview.setFitWidth(400);
+        processedimageview.setFitHeight(200);
+        processedimageview.setFitWidth(400);
+        
         Separator separator1 = new Separator();
         separator1.setMinSize(20, 20);
         separator1.setOrientation(Orientation.VERTICAL);
@@ -219,8 +239,6 @@ public class KeyOperations extends BorderPane {
         iv.setFitWidth(32);
         label1.setGraphic(iv);
 
-
-
         label1.setBorder(new Border(new BorderStroke(Color.NAVY, BorderStrokeStyle.SOLID, new CornerRadii(3), new BorderWidths(2))));
         label1.setTextAlignment(TextAlignment.CENTER);
         //BorderPane.setAlignment(label1, Pos.CENTER);
@@ -234,6 +252,26 @@ public class KeyOperations extends BorderPane {
         return vb;
     }
 
+    private HBox generateBottomPanel() {
+        DBImageView.setFitHeight(200);
+        DBImageView.setFitWidth(400);
+        
+        Separator separator1 = new Separator();
+        separator1.setMinSize(20, 20);
+        separator1.setOrientation(Orientation.VERTICAL);
+        
+        classification = new Label();
+        Font myFont = Font.font("Verdana", FontPosture.ITALIC, 20);
+        classification.setFont(myFont);
+        classification.setTextFill(Color.web("#ff0000"));
+        
+
+        HBox hb  = new HBox();
+        hb.getChildren().addAll(DBImageView, separator1,classification);
+
+        return hb;
+    }
+    
     public VBox getCameraOperations() {
         VBox dipOperations = new VBox(10);
         //Load
@@ -301,7 +339,7 @@ public class KeyOperations extends BorderPane {
         // Process 
         Button ClassifyKeyButton = new Button("Classify");
         ClassifyKeyButton.setMaxWidth(Double.MAX_VALUE);
-        //ClassifyKeyButton.setOnAction(new Operation8Handler());
+        ClassifyKeyButton.setOnAction(new Operation8Handler());
 
         // Final layout
         VBox vb = new VBox(10);
@@ -392,7 +430,7 @@ public class KeyOperations extends BorderPane {
             // OpenCV Stuff... Mat in and Mat out
             binarylImageMat =  OpenCVProcessor.doThreshold(graylImageMat,((int) thresholdSlider.getValue()));
             Image resultImg = FXDIPUtils.mat2Image(binarylImageMat); 
-            binarylImageView.setImage(resultImg);            
+            binarylImageView.setImage(resultImg);  
         }        
     }
     
@@ -424,11 +462,39 @@ public class KeyOperations extends BorderPane {
     class Operation3Handler implements EventHandler<ActionEvent> {
         @Override
         public void handle(ActionEvent event) {
-            double[] features       = OpenCVProcessor.doFDDescriptorsComplexDistance(binarylImageMat,((int) featuresSlider.getValue())); 
+            features = OpenCVProcessor.doFDDescriptorsComplexDistance(binarylImageMat,((int) featuresSlider.getValue())); 
             //Graph the FDs... they are tiny in mgd?! first is always one (you can remove it if you want to).
             fdGraph = fdGraph.graphFD(features, ((int) featuresSlider.getValue()));  
         }        
     }
-
+    
+    //Classify
+    class Operation8Handler implements EventHandler<ActionEvent> {
+        @Override
+        public void handle(ActionEvent event) {
+            Database d = new Database();
+            ArrayList<double[]> featuresDB = d.getImageDescriptors();
+            int len = featuresDB.size();
+            Features f = new Features();
+            //int descriptors = (int) featuresSlider.getValue();
+            double[] distFeatureV = new double[len];
+            for(int i = 0; i < len; i++){
+                distFeatureV[i] = f.distance_feature_vector(features, featuresDB.get(i));
+            }
+            for(int i = 0; i < len; i++){
+                System.out.println("Distance of image " + i + ": " + distFeatureV[i]);
+            }
+            ID = f.classification(distFeatureV);
+            classification.setText(d.getKeyOwnerInfo(ID));
+            try{
+            byte[] image_1D = d.getMatchingImage(ID);
+            }catch(Exception e){
+                System.out.println("Exception " + e);
+            }
+            BufferedImage dbimage = ImageIoFX.readImage("databaseImage.jpg");
+            DBImage  = SwingFXUtils.toFXImage(dbimage, null);
+            DBImageView.setImage(DBImage);
+        }        
+    }
 }
 
