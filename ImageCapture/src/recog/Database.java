@@ -8,7 +8,10 @@ package recog;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.sql.Blob;
 import java.sql.Connection;
@@ -35,6 +38,8 @@ import utilities.ImageIoFX;
  */
 public class Database 
 {
+    
+    byte[] byte2;
 
     /**
      * @return the connection
@@ -102,7 +107,7 @@ public class Database
     {
         try
         {
-            setConnection(DriverManager.getConnection("jdbc:mysql://127.0.0.1:3306/keymatching", "root", "root"));
+            setConnection(DriverManager.getConnection("jdbc:mysql://127.0.0.1:3306/finalproject", "root", "1398"));
             setMyStmt(getConnection().createStatement());
         } 
         catch (SQLException ex)
@@ -220,8 +225,7 @@ public class Database
                     //Blob test=rs.getBlob("image");
                     InputStream x=image.getBinaryStream();
                     int size=x.available();
-                    OutputStream out= new FileOutputStream("C:\\Users\\yessi\\Desktop\\School\\2017-2018\\Spring 2018\\"
-                        + "CSCI 4301.01I - DIP\\Projects Homework\\Project-08 Final Project\\Final_Project\\databaseImage.jpg");
+                    OutputStream out= new FileOutputStream("databaseImage.jpg");
                     byte b[]= new byte[size];
                     x.read(b);
                     out.write(b); 
@@ -235,5 +239,6 @@ public class Database
         }
         return byte2;    
     }
+    
     
 }
