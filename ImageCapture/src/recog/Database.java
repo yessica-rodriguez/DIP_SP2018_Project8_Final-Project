@@ -184,4 +184,27 @@ public class Database
     }
     //public 
     
+    public String getKeyOwnerInfo(int id)
+    {
+        String info = "";
+        try
+        {
+            //retrieving the features from the database
+            ResultSet myRs = myStmt.executeQuery("Select features.featuresid, features.content, features.keyid, keydata.keyid, keydata.ownerid"
+                    + ", owner.ownerid, owner.firstname, owner.lastname from features,keydata, owner where features.keyid=keydata.keyid AND keydata.ownerid = owner.ownerid");
+            while(myRs.next())
+            {
+                if(myRs.getInt("features.featuresid") == id)
+                    info = ("image with id="+myRs.getString("keydata.keyid")+" belongs to "+myRs.getString("owner.firstname")
+                        +" "+myRs.getString("owner.lastname"));
+            }
+        } 
+        catch (SQLException ex)
+        {
+            ex.printStackTrace();
+            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return info;    
+    }
+    
 }
