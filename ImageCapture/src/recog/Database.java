@@ -195,8 +195,7 @@ public class Database
             while(myRs.next())
             {
                 if(myRs.getInt("features.featuresid") == id)
-                    info = ("image with id="+myRs.getString("keydata.keyid")+" belongs to "+myRs.getString("owner.firstname")
-                        +" "+myRs.getString("owner.lastname"));
+                    info = ("Key Owner: "+myRs.getString("owner.firstname")+" "+myRs.getString("owner.lastname"));
             }
         } 
         catch (SQLException ex)
@@ -205,6 +204,36 @@ public class Database
             Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
         }
         return info;    
+    }
+    
+    public byte[] getMatchingImage(int id) throws Exception
+    {
+        try
+        {
+            //retrieving the features from the database
+            ResultSet myRs = myStmt.executeQuery("SELECT * FROM finalproject.keydata");
+            while(myRs.next())
+            {
+                if(myRs.getInt("keydata.keyid") == id){
+                    Blob image = myRs.getBlob("keydata.content"); //retrieving the blob
+                    byte2 = image.getBytes(1, (int)image.length()); //getting al the bytes of the blob
+                    //Blob test=rs.getBlob("image");
+                    InputStream x=image.getBinaryStream();
+                    int size=x.available();
+                    OutputStream out= new FileOutputStream("C:\\Users\\yessi\\Desktop\\School\\2017-2018\\Spring 2018\\"
+                        + "CSCI 4301.01I - DIP\\Projects Homework\\Project-08 Final Project\\Final_Project\\databaseImage.jpg");
+                    byte b[]= new byte[size];
+                    x.read(b);
+                    out.write(b); 
+                }
+            }
+        } 
+        catch (SQLException ex)
+        {
+            ex.printStackTrace();
+            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return byte2;    
     }
     
 }
